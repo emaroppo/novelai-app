@@ -1,0 +1,10 @@
+[
+    {"title":"Title",
+    "type":"TextField",
+    "mandatory":"true"
+    },
+    {"title":"Description",
+    "type":"TextArea",
+    "mandatory":"false"}
+]
+   
