@@ -75,7 +75,7 @@ class Paragraph(NodeMixin, Base):
         self.parent_fragment = parent_fragment  # The 'parent' fragment of this paragraph
 
         if first:
-            self.fragments = [ParagraphFragment(text='⁂', paragraph_id=str(self._id))]
+            self.fragments = [ParagraphFragment(text=' ', paragraph_id=str(self._id))]
             self.active_fragment = self.fragments[0]
 
         else:

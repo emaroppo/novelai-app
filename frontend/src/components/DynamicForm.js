@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { TextField, Button, FormControl, FormLabel } from "@mui/material";
 import PropTypes from "prop-types";
+import ResultSelect from "./ResultSelect";
 
 const InputField = ({ fieldConfig, handleChange }) => {
   const { type, mandatory, title } = fieldConfig;
@@ -29,6 +30,8 @@ const InputField = ({ fieldConfig, handleChange }) => {
           rows={4}
         />
       );
+    case "ResultSelect":
+      return <ResultSelect handleChange={handleChange} />;
     // Add more cases for different input types as needed
     default:
       return null;
@@ -47,8 +50,9 @@ InputField.propTypes = {
 const DynamicForm = ({ fields, onSubmit }) => {
   const [formData, setFormData] = useState({});
 
-  const handleChange = (name) => (event) => {
-    setFormData({ ...formData, [name]: event.target.value });
+  const handleChange = (name) => (data) => {
+    const value = data.target ? data.target.value : data;
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleSubmit = (event) => {

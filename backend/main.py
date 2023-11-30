@@ -1,20 +1,15 @@
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
-from typing import List, Optional
 from classes.story.Story import Story
-from classes.story.Paragraph import Paragraph
+from classes.lorebook.Lorebook import Lorebook
+from classes.lorebook.LorebookEntry import LorebookEntry
 from bson import json_util
-from classes.story.ParagraphFragment import ParagraphFragment
 from bson import ObjectId
 from bson.json_util import dumps
 import json 
-#CORSMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from enum import Enum
 from classes.novel_api import NovelAPI
-#dereference DBRef
-from classes.novel_api import NovelAPI
-import pickle
 
 novel_api=NovelAPI()
 
@@ -132,3 +127,96 @@ async def generate(story_id: str):
         "text": story_text,
         "title": story['title'],
     }
+
+@app.get('/lorebooks')
+def get_lorebooks():
+    # Retrieve lorebooks from the database
+    lorebooks = Lorebook.retrieve_all()
+    response = [{'_id': str(lorebook['_id']), 'title': lorebook['title']} for lorebook in lorebooks]
+    
+    return response
+
+@app.post('/lorebooks/create')
+async def create_lorebook(request: Request):
+    # Create a new lorebook in the database
+    lorebook_data= await request.json()
+    entries = lorebook_data.get("entries")
+    entries = [ObjectId(entry) for entry in entries]
+    if entries:
+        entries = [LorebookEntry.load_from_db(entry) for entry in entries]
+    lorebook_data['entries'] = entries
+    lorebook = Lorebook(**lorebook_data)
+    lorebook_id=lorebook.save_to_db()
+    lorebook_id = lorebook._id
+    lorebook_id = json_util.dumps(lorebook_id)
+    
+    return lorebook_id
+
+@app.get('/lorebooks/{lorebook_id}')
+async def get_lorebook(lorebook_id: str):
+    # Retrieve a specific lorebook from the database
+    lorebook = Lorebook.deserialize(Lorebook.from_db(lorebook_id))
+    lorebook=json.loads(dumps(lorebook.serialize()))
+    return {
+        "title": lorebook['title'],
+        "entries": [entry['$id']['$oid'] for entry in lorebook['entries']],
+    }
+
+@app.post('/lorebooks/{lorebook_id}/add_entry')
+async def add_entry(lorebook_id: str, request: Request):
+    # Extract title and content from the request body
+    data = await request.json()
+    title = data.get("title")
+    content = data.get("content")
+
+    if not title:
+        raise HTTPException(status_code=400, detail="Title is required")
+    if not content:
+        raise HTTPException(status_code=400, detail="Content is required")
+
+    # Retrieve the lorebook data from the database
+    lorebook = Lorebook.deserialize(Lorebook.from_db(lorebook_id))
+
+    # Create a new LorebookEntry object
+    entry = LorebookEntry(title=title, content=content)
+
+    # Add the entry to the lorebook
+    lorebook.add_entry(entry)
+
+    # Save changes to the database
+    lorebook.save_to_db()
+
+    # Return the updated lorebook content
+    lorebook=json.loads(dumps(lorebook.serialize()))
+    return {
+        "title": lorebook['title'],
+        "entries": [entry['$id']['$oid'] for entry in lorebook['entries']],
+    }
+
+@app.post('/entries/')
+async def get_entries(request: Request):
+    # Extract title and content from the request body
+    data = await request.json()
+    if 'lorebook_id' in data:
+        lorebook_id = data.get("lorebook_id")
+        lorebook = Lorebook.deserialize(Lorebook.from_db(lorebook_id))
+        lorebook=json.loads(dumps(lorebook.serialize()))
+        return {
+            "title": lorebook['title'],
+            "entries": [entry['$id']['$oid'] for entry in lorebook['entries']],
+        }
+    else:
+        entries = LorebookEntry.retrieve_all()
+        response = [{'_id': str(entry['_id']), 'title': entry['title']} for entry in entries]
+        return response
+    
+@app.post('/entries/create')
+async def create_entry(request: Request):
+    # Create a new entry in the database
+    entry_data= await request.json()
+    entry = LorebookEntry(**entry_data)
+    entry_id=entry.save_to_db()
+    entry_id = entry._id
+    entry_id = json_util.dumps(entry_id)
+    
+    return entry_id

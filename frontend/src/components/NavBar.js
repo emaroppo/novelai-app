@@ -15,6 +15,9 @@ const NavBar = () => {
         <Button color="inherit" component={RouterLink} to="/story/create">
           Create a Story
         </Button>
+        <Button color="inherit" component={RouterLink} to="/lorebooks">
+          Lore Library
+        </Button>
         {/* Add more buttons here for additional links */}
       </Toolbar>
     </AppBar>
