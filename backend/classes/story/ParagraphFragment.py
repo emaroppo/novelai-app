@@ -7,13 +7,23 @@ class ParagraphFragment(Base, NodeMixin):
     collection = "paragraph_fragments"
 
     def __init__(
-        self, text, paragraph_id=None, config=None, _id=None, parent=None, children=None
+        self,
+        text=None,
+        paragraph_id=None,
+        config=None,
+        _id=None,
+        parent=None,
+        children=None,
     ):
         super().__init__(_id)
-        NodeMixin.__init__(self, parent=parent, children=children)
-        self.text = text
+        self.text = text if text is not None else self.generate()
         self.paragraph_id = paragraph_id
         self.config = config if config else {}
+
+        # Setting the parent and children for NodeMixin
+        self.parent = parent
+        if children:
+            self.children = children
 
     def serialize(self):
         entry = {"_id": self._id, "text": self.text, "config": self.config}
@@ -21,20 +31,25 @@ class ParagraphFragment(Base, NodeMixin):
             entry["children"] = [ObjectId(child._id) for child in self.children]
         if self.parent:
             entry["parent"] = ObjectId(self.parent._id)
+        if self.paragraph_id:
+            entry["paragraph_id"] = ObjectId(self.paragraph_id)
 
         return entry
 
     @classmethod
-    def deserialize(cls, data):
+    def deserialize(cls, data, paragraph_id=None):
         parent = None
         if data.get("parent"):
-            parent = cls.load_from_db(Base.db, data.get("parent"))
+            parent = cls.load_from_db(data.get("parent"))
 
         children = []
         for child_id in data.get("children", []):
-            child = cls.load_from_db(Base.db, child_id)
+            child = cls.load_from_db(child_id)
             if child:
                 children.append(child)
+        
+        if paragraph_id is None:
+            paragraph_id = data.get("paragraph_id")
 
         return cls(
             text=data.get("text"),
@@ -42,6 +57,7 @@ class ParagraphFragment(Base, NodeMixin):
             _id=data.get("_id"),
             parent=parent,
             children=children,
+            paragraph_id=paragraph_id,
         )
 
     def save_to_db(self):
@@ -58,31 +74,6 @@ class ParagraphFragment(Base, NodeMixin):
     def load_from_db(cls, _id):
         data = Base.db.paragraph_fragments.find_one({"_id": _id})
         return cls.deserialize(data) if data else None
-
-    def __init__(
-        self,
-        text=None,
-        _id=None,
-        config=None,
-        paragraph=None,
-        parent=None,
-        children=None,
-    ):
-        Base.__init__(self)
-        NodeMixin.__init__(self)
-
-        self._id = _id
-        self.config = config if config else dict()
-
-        self.paragraph = paragraph
-        self.parent = parent
-
-        if children:
-            self.children = children
-        if not text:
-            self.text = self.generate()
-        else:
-            self.text = text
 
     def assemble_prompt(self):
         prompt = ""

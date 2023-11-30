@@ -5,6 +5,9 @@ from classes.story.Story import Story
 from classes.story.Paragraph import Paragraph
 from bson import json_util
 from classes.story.ParagraphFragment import ParagraphFragment
+from bson import ObjectId
+from bson.json_util import dumps
+import json 
 #CORSMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from enum import Enum
@@ -43,6 +46,7 @@ def get_stories():
     # Retrieve stories from the database
     stories = Story.retrieve_all()
     response = [{'_id': str(story['_id']), 'title': story['title']} for story in stories]
+    
     return response
 
 @app.post("/stories/create")
@@ -61,19 +65,41 @@ def get_story(story_id: str):
     # Retrieve a specific story from the database
     story = Story.deserialize(Story.from_db(story_id))
     story_text = story.render_story(story.active_fragment)
+    story=json.loads(dumps(story.serialize()))
+    print(story['active_fragment'])
 
-    return story_text
-
-@app.post("/stories/{story_id}/interact")
-def interact_with_story(story_id: str, interaction: InteractModel, choice: UserChoice):
-    # Retrieve the story from the database
-    story = Story.from_db(story_id)
-
-    #dereference the active fragment
+    return {
+        "active_fragment": story['active_fragment']['$id']['$oid'],
+        "text": story_text,
+        "title": story['title'],
+    }
 
 
-    # Process the user's choice
-    new_text = story.process_user_choice(choice, interaction.user_input, api)
+@app.post('/update_story/{story_id}/{fragment_id}')
+async def update_story(story_id: str, fragment_id: str, request: Request):
+    # Extract user_input from the request body
+    data = await request.json()
+    user_input = data.get("user_input")
 
-    # Return the updated story with the new text
-    return {"story": story, "new_text": new_text}
+    if not user_input:
+        raise HTTPException(status_code=400, detail="User input is required")
+
+    # Retrieve the story data from the database
+    story = Story.deserialize(Story.from_db(story_id))
+    print(story.__dict__)
+
+    # Call the add_user_input method of the Story object
+    result = story.add_user_input(ObjectId(fragment_id), user_input)
+
+    # Save changes to the database
+    story.save_to_db()
+    # Return the updated story content
+    story_text = story.render_story(story.active_fragment)
+    story=json.loads(dumps(story.serialize()))
+    print(story['active_fragment'])
+
+    return {
+        "active_fragment": story['active_fragment']['$id']['$oid'],
+        "text": story_text,
+        "title": story['title'],
+    }

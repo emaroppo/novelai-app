@@ -137,3 +137,32 @@ class Story(Base):
         build_text(target_fragment)
 
         return story_text.strip()
+    
+    def add_user_input(self, fragment_id, input_text):
+        # Find the paragraph fragment that precedes the user input
+        preceding_fragment = ParagraphFragment.load_from_db(fragment_id)
+        if not preceding_fragment:
+            return "Invalid fragment ObjectId."
+
+        # Create a new fragment with the user input
+        new_fragment = ParagraphFragment(text=input_text, paragraph_id=preceding_fragment.paragraph_id, parent=preceding_fragment)
+        new_fragment.save_to_db()
+        
+        #search paragraphs for the paragraph that contains the preceding fragment
+        for paragraph in self.paragraphs:
+            print(preceding_fragment.paragraph_id)
+            if paragraph._id == preceding_fragment.paragraph_id:
+                #add the new fragment to the paragraph
+                paragraph.fragments.append(new_fragment)
+                #update the active fragment of the paragraph
+                paragraph.active_fragment = new_fragment
+                #update the active paragraph of the story
+                
+
+
+        # Update the active fragment of the story
+        self.active_fragment = new_fragment
+
+        self.save_to_db()
+
+        return "User input processed successfully."

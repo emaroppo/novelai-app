@@ -24,10 +24,30 @@ const StoryView = () => {
   };
 
   const handleSubmit = async () => {
-    // Handle the submit action, for example sending the input back to the server
-    console.log("User Input:", userInput);
-    // Clear the input field after submit
-    setUserInput("");
+    const fragmentId = storyContent.active_fragment;
+    console.log("Submitting:", userInput);
+
+    try {
+      const response = await fetch(
+        `http://localhost:8000/update_story/${storyId}/${fragmentId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            fragment_id: fragmentId,
+            user_input: userInput,
+          }),
+        },
+      );
+      const updatedStory = await response.json();
+
+      setStoryContent(updatedStory); // Update the displayed story with the new content
+      setUserInput(""); // Clear the input field after submit
+    } catch (error) {
+      console.error("Error updating story:", error);
+    }
   };
 
   return (
@@ -37,7 +57,7 @@ const StoryView = () => {
           {storyContent.title} {/* Display the story title */}
         </Typography>
         <Typography variant="body1" gutterBottom>
-          {storyContent} {/* Display the story content */}
+          {storyContent.text} {/* Display the story content */}
         </Typography>
       </Paper>
       <TextField

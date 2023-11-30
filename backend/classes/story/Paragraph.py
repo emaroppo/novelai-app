@@ -44,22 +44,25 @@ class Paragraph(NodeMixin, Base):
         parent = None
         if data.get('parent'):
             parent = cls.load_from_db(Base.db, data.get('parent'))
+        
 
         return cls(fragments=fragments, parent=parent, active_fragment=active_fragment, _id=data.get('_id'))
 
 
     def save_to_db(self):
-        entry = self.serialize()
-        if self._id is None:
-            entry.pop('_id')
-            self._id = Base.db.paragraph_fragments.insert_one(entry).inserted_id
-        else:
-            Base.db.paragraph_fragments.update_one({'_id': self._id}, {'$set': entry}, upsert=True)
+        Base.db.paragraphs.update_one(
+            {'_id': self._id},
+            {'$set': self.serialize()},
+            upsert=True
+        )
+        return self._id
+        
 
     @classmethod
-    def load_from_db(cls, _id):
-        data = Base.db.paragraph_fragments.find_one({'_id': _id})
-        return cls.deserialize(data) if data else None
+    def load_from_db(cls, db, _id):
+        # Load a Paragraph from the database by its _id
+        data = db.paragraphs.find_one({'_id': _id})
+        return cls.deserialize(db, data) if data else None
 
     def __init__(self, fragments=list(), _id=None, parent=None, children=None, parent_fragment=None, first=False, active_fragment=None):
         super().__init__()
@@ -71,7 +74,7 @@ class Paragraph(NodeMixin, Base):
         self.parent_fragment = parent_fragment  # The 'parent' fragment of this paragraph
 
         if first:
-            self.fragments = [ParagraphFragment(text='⁂', paragraph=self)]
+            self.fragments = [ParagraphFragment(text='⁂', paragraph_id=str(self._id))]
             self.active_fragment = self.fragments[0]
 
         else:
