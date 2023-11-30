@@ -5,17 +5,20 @@ from bson import DBRef, ObjectId
 class Paragraph(NodeMixin, Base):
     collection = "paragraphs"
 
+    from anytree import NodeMixin
+from classes.story.ParagraphFragment import ParagraphFragment, Base
+from bson import DBRef, ObjectId
+
+class Paragraph(NodeMixin, Base):
+    collection = "paragraphs"
+
     def serialize(self):
-        #Insert all the fragments not yet in the database, return the list of fragment ids
-        new_ids = []
+        fragment_ids = [fragment._id for fragment in self.fragments if fragment._id is not None]
         for fragment in self.fragments:
             if fragment._id is None:
                 fragment.save_to_db()
-                new_ids.append(fragment._id)
-        new_ids.extend([fragment._id for fragment in self.fragments if fragment._id is not None])
-        fragments = [DBRef('paragraph_fragments', frag_id) for frag_id in new_ids]
-
-        #Reference parent paragraph by id
+                fragment_ids.append(fragment._id)
+        fragments = [DBRef('paragraph_fragments', frag_id) for frag_id in fragment_ids]
 
         parent_paragraph = ObjectId(self.parent._id) if self.parent else None
         parent_fragment = DBRef('paragraph_fragments', self.parent_fragment._id) if self.parent_fragment else None
@@ -37,32 +40,26 @@ class Paragraph(NodeMixin, Base):
         active_fragment = ParagraphFragment.deserialize(active_fragment) if active_fragment else None
         parent_fragment = Base.db.dereference(data.get('parent_fragment')) if data.get('parent_fragment') else None
         parent_fragment = ParagraphFragment.deserialize(parent_fragment) if parent_fragment else None
-        parent = Paragraph.load_from_db(Base.db, data.get('parent')) if data.get('parent') else None
-        children = [Paragraph.load_from_db(Base.db, child) for child in data.get('children', [])]
 
-        return cls(
-            fragments=fragments,
-            _id=data.get('_id'),
-            parent=parent,
-            children=children,
-            parent_fragment=parent_fragment,
-            active_fragment=active_fragment
-        )
+        parent = None
+        if data.get('parent'):
+            parent = cls.load_from_db(Base.db, data.get('parent'))
+
+        return cls(fragments=fragments, parent=parent, active_fragment=active_fragment, _id=data.get('_id'))
+
 
     def save_to_db(self):
-        Base.db.paragraphs.update_one(
-            {'_id': self._id},
-            {'$set': self.serialize()},
-            upsert=True
-        )
-        return self._id
-        
+        entry = self.serialize()
+        if self._id is None:
+            entry.pop('_id')
+            self._id = Base.db.paragraph_fragments.insert_one(entry).inserted_id
+        else:
+            Base.db.paragraph_fragments.update_one({'_id': self._id}, {'$set': entry}, upsert=True)
 
     @classmethod
-    def load_from_db(cls, db, _id):
-        # Load a Paragraph from the database by its _id
-        data = db.paragraphs.find_one({'_id': _id})
-        return cls.deserialize(db, data) if data else None
+    def load_from_db(cls, _id):
+        data = Base.db.paragraph_fragments.find_one({'_id': _id})
+        return cls.deserialize(data) if data else None
 
     def __init__(self, fragments=list(), _id=None, parent=None, children=None, parent_fragment=None, first=False, active_fragment=None):
         super().__init__()

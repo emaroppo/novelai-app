@@ -60,11 +60,7 @@ async def create_story(request: Request):
 def get_story(story_id: str):
     # Retrieve a specific story from the database
     story = Story.deserialize(Story.from_db(story_id))
-
-    print(story.__dict__)
-
     story_text = story.render_story(story.active_fragment)
-    print(story_text)
 
     return story_text
 

@@ -1,14 +1,25 @@
 // withFetchHOC.js
-import React, { Component } from 'react';
+import React, { Component } from "react";
 
+/**
+ * A higher-order component that fetches data when the wrapped component mounts.
+ *
+ * @param {React.Component} WrappedComponent - The component to wrap.
+ * @param {Function} fetchFunction - The function to fetch data.
+ * @param {string} newElementLink - The link for creating new elements.
+ * @return {React.Component} The wrapped component.
+ */
 const withFetchHOC = (WrappedComponent, fetchFunction, newElementLink) => {
-  return class extends Component {
+  return class withFetch extends Component {
     state = {
       data: [],
       loading: true,
-      error: null
+      error: null,
     };
 
+    /**
+     * Fetches data when the component mounts.
+     */
     async componentDidMount() {
       try {
         const data = await fetchFunction();
@@ -18,6 +29,11 @@ const withFetchHOC = (WrappedComponent, fetchFunction, newElementLink) => {
       }
     }
 
+    /**
+     * Renders the wrapped component with the fetched data, or a loading message, or an error message.
+     *
+     * @return {React.Element} The rendered element.
+     */
     render() {
       const { loading, data, error } = this.state;
 

@@ -41,12 +41,11 @@ class Story(Base):
         paragraphs = [
             Paragraph.deserialize(para_data) for para_data in data.get("paragraphs", [])
         ]
-        print(data.get("active_fragment"))
-        print(Base.db.dereference(data.get("active_fragment")))
-        active_fragment = ParagraphFragment.deserialize(
-            Base.db.dereference(data.get("active_fragment"))
-        )
-        print(active_fragment)
+        active_fragment = None
+        if data.get("active_fragment"):
+            active_fragment_data = Base.db.dereference(data.get("active_fragment"))
+            active_fragment = ParagraphFragment.deserialize(active_fragment_data)
+
         return cls(
             title=data.get("title"),
             description=data.get("description"),
@@ -61,17 +60,14 @@ class Story(Base):
         entry = self.serialize()
         if self._id is None:
             entry.pop("_id")
-            self._id = self.db[self.collection].insert_one(entry).inserted_id
+            self._id = Base.db.stories.insert_one(entry).inserted_id
         else:
-            self.db[self.collection].update_one(
-                {"_id": self._id}, {"$set": entry}, upsert=True
-            )
+            Base.db.stories.update_one({"_id": self._id}, {"$set": entry}, upsert=True)
 
     @classmethod
     def load_from_db(cls, _id):
-        # Load a Story from the database by its _id
         data = Base.db.stories.find_one({"_id": _id})
-        return cls.deserialize(Base.db, data) if data else None
+        return cls.deserialize(data) if data else None
 
     def __init__(
         self,
@@ -122,21 +118,22 @@ class Story(Base):
         # update active fragment
         self.active_fragment = self.active_paragraph.active_fragment
 
-    def render_story(self, fragment_node):
+    def render_story(self, target_fragment):
         # Initialize the story text
         story_text = ""
 
-        # Check if the provided fragment_node is valid
-        if not fragment_node or not isinstance(fragment_node, ParagraphFragment):
+        # Check if the provided target_fragment is valid
+        if not target_fragment or not isinstance(target_fragment, ParagraphFragment):
             return "Invalid fragment node."
 
-        # Traverse the story from the start to the fragment_node
-        for paragraph in self.paragraphs:
-            for frag in paragraph.fragments:
-                story_text += frag.text + "\n\n"
-                if frag == fragment_node:
-                    # Stop when the target fragment is reached
-                    return story_text.strip()
+        # Function to recursively build the story text
+        def build_text(fragment):
+            nonlocal story_text
+            if fragment.parent:
+                build_text(fragment.parent)
+            story_text += fragment.text + "\n\n"
 
-        # If the fragment_node is not found in the story, return the full story
+        # Start building the story text from the target fragment
+        build_text(target_fragment)
+
         return story_text.strip()

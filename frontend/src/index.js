@@ -1,13 +1,12 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 
-import App from './App';
-import StoryView from './pages/StoryView'; // Component to interact with a story
-import StoryList from './pages/StoryList';
-import StoryCreate from './pages/StoryCreate';
+import StoryView from "./pages/StoryView"; // Component to interact with a story
+import StoryList from "./pages/StoryList";
+import StoryCreate from "./pages/StoryCreate";
 
-const rootElement = document.getElementById('root');
+const rootElement = document.getElementById("root");
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>

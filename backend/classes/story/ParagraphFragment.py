@@ -26,12 +26,25 @@ class ParagraphFragment(Base, NodeMixin):
 
     @classmethod
     def deserialize(cls, data):
+        parent = None
+        if data.get("parent"):
+            parent = cls.load_from_db(Base.db, data.get("parent"))
+
+        children = []
+        for child_id in data.get("children", []):
+            child = cls.load_from_db(Base.db, child_id)
+            if child:
+                children.append(child)
+
         return cls(
-            text=data.get("text"), config=data.get("config"), _id=data.get("_id")
+            text=data.get("text"),
+            config=data.get("config"),
+            _id=data.get("_id"),
+            parent=parent,
+            children=children,
         )
 
     def save_to_db(self):
-        # Save the ParagraphFragment to the database
         entry = self.serialize()
         if self._id is None:
             entry.pop("_id")
@@ -43,7 +56,6 @@ class ParagraphFragment(Base, NodeMixin):
 
     @classmethod
     def load_from_db(cls, _id):
-        # Load a ParagraphFragment from the database by its _id
         data = Base.db.paragraph_fragments.find_one({"_id": _id})
         return cls.deserialize(data) if data else None
 
