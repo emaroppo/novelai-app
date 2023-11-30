@@ -11,6 +11,7 @@ from bson import DBRef, ObjectId
 
 class Paragraph(NodeMixin, Base):
     collection = "paragraphs"
+    
 
     def serialize(self):
         fragment_ids = [fragment._id for fragment in self.fragments if fragment._id is not None]
@@ -70,7 +71,7 @@ class Paragraph(NodeMixin, Base):
         self._id = _id if _id else ObjectId()
         self.parent = parent
         self.children = children if children else []
-        self.active_fragment = None  # Track the active fragment
+        self.active_fragment = active_fragment  # Track the active fragment
         self.parent_fragment = parent_fragment  # The 'parent' fragment of this paragraph
 
         if first:
@@ -86,13 +87,13 @@ class Paragraph(NodeMixin, Base):
         new_text = self.active_fragment.generate(api)
         if type(new_text) is str:
             # Create a new fragment with the generated text and append to the current paragraph
-            new_fragment = ParagraphFragment(text=new_text, paragraph=self, parent=self.active_fragment)
+            new_fragment = ParagraphFragment(text=new_text, paragraph_id=self._id, parent=self.active_fragment)
             self.fragments.append(new_fragment)
             self.active_fragment = new_fragment  # Update the active fragment
 
         elif type(new_text) is tuple:
             # Handle paragraph break: Create a new fragment for the first part of the text
-            first_part_fragment = ParagraphFragment(text=new_text[0], paragraph=self, parent=self.active_fragment)
+            first_part_fragment = ParagraphFragment(text=new_text[0], paragraph_id=self._id, parent=self.active_fragment)
             self.fragments.append(first_part_fragment)
             self.active_fragment = first_part_fragment  # Update the active fragment
 

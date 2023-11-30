@@ -1,10 +1,13 @@
-// StoryView.js
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Container, Typography, TextField, Button, Paper } from "@mui/material";
 
 const StoryView = () => {
-  const [storyContent, setStoryContent] = useState("");
+  const [storyContent, setStoryContent] = useState({
+    title: "",
+    text: "",
+    active_fragment: "",
+  });
   const [userInput, setUserInput] = useState("");
   const { storyId } = useParams(); // This hooks into the URL parameter
 
@@ -13,7 +16,7 @@ const StoryView = () => {
     const fetchStory = async () => {
       const response = await fetch(`http://localhost:8000/stories/${storyId}`);
       const data = await response.json();
-      setStoryContent(data); // Assuming 'content' is a field in your story object
+      setStoryContent(data);
     };
 
     fetchStory();
@@ -49,15 +52,39 @@ const StoryView = () => {
       console.error("Error updating story:", error);
     }
   };
+  const handleGenerateContent = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:8000/generate/${storyId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            // include other necessary headers
+          },
+          // include body if required
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const newStoryData = await response.json();
+      setStoryContent(newStoryData); // Update your story state here
+    } catch (error) {
+      console.error("Error generating story:", error);
+    }
+  };
 
   return (
     <Container maxWidth="md">
       <Paper elevation={3} style={{ padding: "20px", marginTop: "20px" }}>
         <Typography variant="h4" component="h1" gutterBottom>
-          {storyContent.title} {/* Display the story title */}
+          {storyContent.title}
         </Typography>
         <Typography variant="body1" gutterBottom>
-          {storyContent.text} {/* Display the story content */}
+          {storyContent.text}
         </Typography>
       </Paper>
       <TextField
@@ -72,9 +99,17 @@ const StoryView = () => {
         variant="contained"
         color="primary"
         onClick={handleSubmit}
-        style={{ margin: "20px 0" }}
+        style={{ margin: "20px 10px 20px 0" }}
       >
         Send
+      </Button>
+      <Button
+        variant="contained"
+        color="secondary"
+        onClick={handleGenerateContent}
+        style={{ margin: "20px 0" }}
+      >
+        Generate
       </Button>
     </Container>
   );

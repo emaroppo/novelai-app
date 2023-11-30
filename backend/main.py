@@ -13,6 +13,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from enum import Enum
 from classes.novel_api import NovelAPI
 #dereference DBRef
+from classes.novel_api import NovelAPI
+import pickle
+
+novel_api=NovelAPI()
+
 
 class UserChoice(str, Enum):
     accept = "accept"
@@ -40,6 +45,9 @@ class InteractModel(BaseModel):
     user_input: str
 
 api = NovelAPI()
+#print current working directory
+import os
+print(os.getcwd())
 
 @app.get("/stories")
 def get_stories():
@@ -97,6 +105,27 @@ async def update_story(story_id: str, fragment_id: str, request: Request):
     story_text = story.render_story(story.active_fragment)
     story=json.loads(dumps(story.serialize()))
     print(story['active_fragment'])
+
+    return {
+        "active_fragment": story['active_fragment']['$id']['$oid'],
+        "text": story_text,
+        "title": story['title'],
+    }
+
+@app.post('/generate/{story_id}')
+async def generate(story_id: str):
+    # Retrieve the story data from the database
+    story = Story.deserialize(Story.from_db(story_id))
+    print(story.__dict__)
+
+    # Call the generate method of the Story object
+    story.generate(api)
+
+    # Save changes to the database
+    story.save_to_db()
+    # Return the updated story content
+    story_text = story.render_story(story.active_fragment)
+    story=json.loads(dumps(story.serialize()))
 
     return {
         "active_fragment": story['active_fragment']['$id']['$oid'],

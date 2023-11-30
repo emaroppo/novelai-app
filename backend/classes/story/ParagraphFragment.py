@@ -2,6 +2,12 @@ from anytree import NodeMixin
 from bson import ObjectId
 from classes.base import Base
 
+default_config = {
+            "model": "kayra-v1",
+            "min_length": 50,
+            "max_length": 100,
+            "use_string": True,
+        }
 
 class ParagraphFragment(Base, NodeMixin):
     collection = "paragraph_fragments"
@@ -10,7 +16,7 @@ class ParagraphFragment(Base, NodeMixin):
         self,
         text=None,
         paragraph_id=None,
-        config=None,
+        config=default_config,
         _id=None,
         parent=None,
         children=None,
@@ -87,7 +93,7 @@ class ParagraphFragment(Base, NodeMixin):
 
         return prompt.strip()
 
-    def generate(self, story, api):
+    def generate(self, api):
         prompt = self.assemble_prompt()
         new_text = api.generate(prompt, self.config)
 

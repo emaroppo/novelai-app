@@ -34,6 +34,7 @@ class Story(Base):
             "active_fragment": DBRef("paragraph_fragments", self.active_fragment._id)
             if self.active_fragment
             else None,
+            "active_paragraph": self.active_paragraph._id
         }
 
     @classmethod
@@ -45,6 +46,14 @@ class Story(Base):
         if data.get("active_fragment"):
             active_fragment_data = Base.db.dereference(data.get("active_fragment"))
             active_fragment = ParagraphFragment.deserialize(active_fragment_data)
+        
+        if data.get("active_paragraph"):
+            #set active paragraph to paragraph whose id is active_paragraph
+            active_paragraph = data.get("active_paragraph")
+            for paragraph in paragraphs:
+                if paragraph._id == active_paragraph:
+                    active_paragraph = paragraph
+                    break
 
         return cls(
             title=data.get("title"),
@@ -141,8 +150,7 @@ class Story(Base):
     def add_user_input(self, fragment_id, input_text):
         # Find the paragraph fragment that precedes the user input
         preceding_fragment = ParagraphFragment.load_from_db(fragment_id)
-        if not preceding_fragment:
-            return "Invalid fragment ObjectId."
+        #find corresponding 
 
         # Create a new fragment with the user input
         new_fragment = ParagraphFragment(text=input_text, paragraph_id=preceding_fragment.paragraph_id, parent=preceding_fragment)
